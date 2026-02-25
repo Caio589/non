@@ -1,42 +1,59 @@
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000, 3, 12);
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 1.2, 6);
 
-let particles = [];
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.getElementById("scene").appendChild(renderer.domElement);
 
-function createParticles() {
-  particles = [];
-  for (let i = 0; i < 300; i++) {
-    particles.push({
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      vx: (Math.random() - 0.5) * 10,
-      vy: (Math.random() - 0.5) * 10,
-      life: 100
+// Luz cinematográfica
+const key = new THREE.DirectionalLight(0xffffff, 1.2);
+key.position.set(3, 5, 4);
+scene.add(key);
+scene.add(new THREE.AmbientLight(0x404040, 0.6));
+
+// Objeto “monumental”
+const geo = new THREE.IcosahedronGeometry(1.6, 1);
+const mat = new THREE.MeshStandardMaterial({ color: 0x9b7cff, roughness: 0.35, metalness: 0.4 });
+const hero = new THREE.Mesh(geo, mat);
+scene.add(hero);
+
+// Movimento de câmera (abertura)
+gsap.from(camera.position, { z: 12, duration: 4, ease: "power2.out" });
+
+// Desmontagem cinematográfica
+let shards = [];
+function shatter(){
+  hero.visible = false;
+  for(let i=0;i<140;i++){
+    const g = new THREE.BoxGeometry(0.12,0.12,0.12);
+    const m = mat.clone();
+    const p = new THREE.Mesh(g,m);
+    p.position.copy(hero.position);
+    scene.add(p); shards.push(p);
+    gsap.to(p.position,{
+      x:(Math.random()-0.5)*8,
+      y:(Math.random()-0.5)*6,
+      z:(Math.random()-0.5)*8,
+      duration: 2.8,
+      ease: "power3.out"
     });
   }
 }
+setTimeout(shatter, 4200);
 
-function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  particles.forEach(p => {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life--;
-    ctx.fillStyle = "rgba(160,100,255,0.8)";
-    ctx.fillRect(p.x, p.y, 3, 3);
-  });
-  particles = particles.filter(p => p.life > 0);
+function animate(){
   requestAnimationFrame(animate);
+  hero.rotation.y += 0.003;
+  renderer.render(scene, camera);
 }
+animate();
 
-function explode() {
-  createParticles();
-  animate();
-}
-
-function reset() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
+addEventListener("resize",()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
